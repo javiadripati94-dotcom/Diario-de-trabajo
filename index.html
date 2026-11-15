@@ -158,7 +158,14 @@ main{padding:4px 16px calc(env(safe-area-inset-bottom) + 110px);max-width:760px;
 .fr:last-child{border-bottom:0}
 .fr label{flex:1;font-size:16px}
 .fr input,.fr select{border:0;outline:0;background:none;text-align:right;font-size:16px;color:var(--sub);min-width:0;max-width:62%}
-.fr input[type=date],.fr input[type=time]{color:var(--acc);-webkit-appearance:none;appearance:none;min-height:34px}
+.fr input[type=date],.fr input[type=time]{color:var(--acc);-webkit-appearance:none;appearance:none;min-height:38px;background:var(--fill);border-radius:9px;padding:6px 12px;font-weight:600;font-size:17px;min-width:120px;text-align:center}
+.fr label[for]{cursor:pointer}
+.remgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px}
+.remgrid button{padding:12px 2px;border-radius:11px;background:var(--fill);font-size:14px;font-weight:600;color:var(--text)}
+.remgrid button.on{background:var(--acc);color:#fff}
+.remgrid button.off.on{background:#8e8e93}
+.remhint{padding:0 14px 13px;font-size:14px;color:var(--sub)}
+.remhint b{color:var(--text)}
 .fr input.big{text-align:left;max-width:none;flex:1;color:var(--text);font-size:17px;padding:12px 0}
 .fr textarea{flex:1;border:0;outline:0;background:none;resize:vertical;min-height:80px;padding:12px 0;font-size:16px}
 .fr .seg{margin:6px 0;flex:1}
@@ -284,6 +291,8 @@ let SWREG=null;
 function notify(title,body,tag){try{if(!('Notification'in window)||Notification.permission!=='granted')return;if(SWREG&&SWREG.showNotification){SWREG.showNotification(title,{body,tag,icon:'icon-192.png',badge:'icon-192.png'});}else new Notification(title,{body,tag});}catch(e){}}
 const REP={none:'No se repite',daily:'Cada día',weekdays:'Días laborables (L‑V)',weekly:'Cada semana',biweekly:'Cada 2 semanas',monthly:'Cada mes',quarterly:'Cada 3 meses',yearly:'Cada año'};
 const REM={'-1':'Sin aviso','0':'A la hora','5':'5 min antes','10':'10 min antes','15':'15 min antes','30':'30 min antes','60':'1 hora antes','120':'2 horas antes','1440':'1 día antes','2880':'2 días antes','10080':'1 semana antes'};
+const REMQ=[[-1,'Sin aviso'],[0,'A la hora'],[5,'5 min'],[10,'10 min'],[15,'15 min'],[30,'30 min'],[60,'1 hora'],[120,'2 horas'],[1440,'1 día'],[2880,'2 días'],[10080,'1 semana']];
+function remHint(it){if(it.remind==null||it.remind<0)return'No te avisará.';if(!it.date)return'Elige una fecha para el aviso.';const d=new Date(startOf(it,it.date).getTime()-it.remind*6e4);const ds=ymd(d);return'Te avisará: <b>'+esc(relDay(ds).toLowerCase())+(Math.abs(diffDays(todayStr(),ds))>6?'':' ('+d.getDate()+' '+MON[d.getMonth()].slice(0,3)+')')+' a las '+pad(d.getHours())+':'+pad(d.getMinutes())+'</b>'+((!it.time||it.allDay)?' <span class="small">(sin hora: usa la hora de Ajustes)</span>':'');}
 const PRIO=['Ninguna','Baja','Media','Alta'];
 const CAT_COLORS=['#0a84ff','#f2c200','#34c759','#ff3b30','#af52de','#5ac8fa','#ff2d55','#a2845e','#30b0c7','#8e8e93'];
 
@@ -653,7 +662,7 @@ function vAjustes(){const s=S.settings;const opt=(o,v)=>Object.entries(o).map(([
 
 /* ================= editor ================= */
 let ED=null;
-function openSheet(html){$('#sheet').innerHTML=html;$('#ov').classList.add('on');$('#sheet').classList.add('on');}
+function openSheet(html){const ob=$('#sheet .sb');const st=ob&&$('#sheet').classList.contains('on')?ob.scrollTop:0;$('#sheet').innerHTML=html;const nb=$('#sheet .sb');if(nb&&st)nb.scrollTop=st;$('#ov').classList.add('on');$('#sheet').classList.add('on');}
 function closeSheet(){$('#ov').classList.remove('on');$('#sheet').classList.remove('on');ED=null;}
 function openEditor(it,ds){const isNew=!S.items.some(x=>x.id===it.id);ED={it:JSON.parse(JSON.stringify(it)),ds:ds||it.date,isNew};renderEditor();}
 function renderEditor(){const it=ED.it;const s=S.settings;const opt=(o,v)=>Object.entries(o).map(([k,l])=>`<option value="${k}" ${String(v)===k?'selected':''}>${esc(l)}</option>`).join('');
@@ -666,11 +675,11 @@ function renderEditor(){const it=ED.it;const s=S.settings;const opt=(o,v)=>Objec
  <div class="fg">
  <div class="fr"><label>Fecha</label><input type="date" id="e_date" value="${it.date}">${it.date?'<button class="x" data-act="edClearDate">✕</button>':''}</div>
  ${it.date?`<div class="fr"><label>Todo el día</label><label class="sw"><input type="checkbox" id="e_allday" ${it.allDay?'checked':''}><i></i></label></div>
- ${!it.allDay?`<div class="fr"><label>Hora inicio</label><input type="time" id="e_time" value="${it.time}"></div><div class="fr"><label>Hora fin</label><input type="time" id="e_end" value="${it.end}"></div>`:''}
+ ${!it.allDay?`<div class="fr"><label for="e_time">Hora inicio</label><input type="time" id="e_time" value="${it.time}"></div><div class="fr"><label for="e_end">Hora fin</label><input type="time" id="e_end" value="${it.end}"></div>`:''}
  <div class="fr"><label>Repetir</label><select id="e_rep">${opt(REP,it.rep||'none')}</select></div>
- ${isRec(it)?`<div class="fr"><label>Hasta</label><input type="date" id="e_until" value="${it.until||''}"></div>`:''}
- <div class="fr"><label>🔔 Aviso</label><select id="e_rem">${opt(REM,it.remind==null?-1:it.remind)}</select></div>`:'<div class="fr"><label class="muted small">Sin fecha: irá a la bandeja “Sin fecha”</label></div>'}
+ ${isRec(it)?`<div class="fr"><label>Hasta</label><input type="date" id="e_until" value="${it.until||''}"></div>`:''}`:'<div class="fr"><label class="muted small">Sin fecha: irá a la bandeja “Sin fecha”</label></div>'}
  </div>
+ <div class="flbl">🔔 Aviso</div><div class="fg"><div class="remgrid">${REMQ.map(([k,l])=>`<button class="${k<0?'off ':''}${(it.remind==null?-1:it.remind)===k?'on':''}" data-act="edF" data-f="remind" data-v="${k}">${l}</button>`).join('')}</div><div class="remhint">${remHint(it)}</div></div>
  <div class="fg"><div class="fr"><label>Prioridad</label><div class="seg" style="max-width:62%">${PRIO.map((l,i)=>`<button class="${(it.prio||0)===i?'on':''}" data-act="edF" data-f="prio" data-v="${i}">${i?'!'.repeat(i):'—'}</button>`).join('')}</div></div>
  <div class="fr"><label>Categoría</label><select id="e_cat"><option value="">Ninguna</option>${cats.map(c=>`<option value="${c.id}" ${it.cat===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div></div>
  ${it.area==='biz'?`<div class="flbl">Datos del trabajo</div><div class="fg">
@@ -762,7 +771,7 @@ document.addEventListener('click',e=>{unlockAudio();
  // editor
  case'edCancel':closeSheet();break;
  case'edSave':saveEditor();break;
- case'edF':readEditor();ED.it[el.dataset.f]=el.dataset.f==='prio'?+v:v;if(el.dataset.f==='area'){const c=catOf(ED.it.cat);if(c&&c.area!==v)ED.it.cat='';}if(el.dataset.f==='type'&&v==='event'&&ED.it.time&&!ED.it.end)ED.it.end=fromMin(Math.min(toMin(ED.it.time)+60,1439));renderEditor();break;
+ case'edF':readEditor();ED.it[el.dataset.f]=(el.dataset.f==='prio'||el.dataset.f==='remind')?+v:v;if(el.dataset.f==='remind'&&+v>=0&&!ED.it.date)ED.it.date=todayStr();if(el.dataset.f==='area'){const c=catOf(ED.it.cat);if(c&&c.area!==v)ED.it.cat='';}if(el.dataset.f==='type'&&v==='event'&&ED.it.time&&!ED.it.end)ED.it.end=fromMin(Math.min(toMin(ED.it.time)+60,1439));renderEditor();break;
  case'edClearDate':readEditor();ED.it.date='';ED.it.time='';ED.it.end='';ED.it.rep='none';ED.it.remind=-1;renderEditor();break;
  case'subT':readEditor();ED.it.subs[+el.dataset.i].d=!ED.it.subs[+el.dataset.i].d;renderEditor();break;
  case'subDel':readEditor();ED.it.subs.splice(+el.dataset.i,1);renderEditor();break;
